@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Train Times WAT - SUR</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"  crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <style>
+        :root {
+            --background-color: white;
+            --text-color: black;
+            --text-color-2: rgb(61, 61, 61);
+            --border-color: #ddd; 
+            --toolbar-background: #f7f7f7;
+            --toolbar-shadow: rgba(0, 0, 0, 0.1);
+        }
+        @media (prefers-color-scheme: dark) {
+        body {
+            --background-color: black;
+            --text-color: white;
+            --text-color-2: rgb(218, 216, 216);
+            --border-color: #6e6e6e; 
+            --toolbar-background: #181818;
+            --toolbar-shadow: rgba(255, 255, 255, 0.1);
+        }
+        }
+
+        body {
+            background-color: var(--background-color);
+            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;    
+        }
+        
+        #title-bar {
+            /* background-color: #333; */
+            background-color: var(--toolbar-background);
+            /* color: #fff; */
+            color: var(--text-color);
+            font-size: 1.5rem;
+            font-weight: bold;
+            padding: 0.5rem;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            text-align: center;
+        }
+
+        .toolbar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: var(--toolbar-background);
+            box-shadow: 0 -2px 4px var(--toolbar-shadow);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 12px;
+            box-sizing: border-box;
+        }
+
+
+        .toolbar-button {
+            /* background-color: #007aff; */
+            background-color: var(--toolbar-background);
+            color: #007aff;
+            border: none;
+            border-radius: 4px;
+            padding: 0px;
+            font-size: 26px;
+            line-height: 1;
+            text-align: center;
+            text-decoration: none;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+        }
+        button {
+            margin-right: 8px;
+            border: none;
+            border-width: 0px;
+        }
+        
+        #trainTable {
+            
+            margin: 0;
+            margin-top: 3rem;
+            margin-bottom: 3rem;
+            padding: 0;
+        }
+
+        #trainTable table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+
+        #trainTable td {
+            padding: 5px;
+            text-align: left;
+            /* border-bottom: 1px solid #ddd; */
+        }
+        #trainTable tr:not(:first-child):nth-child(odd) {
+            border-top: 1px solid var(--border-color);  
+        }
+
+        #trainTable td:last-child {
+            text-align: right;
+        }
+
+        #trainTable td:nth-child(4) {
+            font-weight: bold;
+        }
+
+        #trainTable td:nth-child(5) {
+            font-weight: bold;
+        }
+
+        #trainTable tr:last-child td {
+            border-bottom: none;
+        }
+        .red {
+            color: red;
+        }
+        .smallest {
+            color: var(--text-color-2);
+            font-size: 0.9rem;
+        }
+        .smaller {
+            color: var(--text-color-2);
+            font-size: 0.95rem;
+        }
+
+    </style>
+    <script>
+
+const now = new Date();
+const timezoneOffset = now.getTimezoneOffset() / 60; // Get the timezone offset in hours
+const timezoneOffsetString = (timezoneOffset > 0 ? '-' : '+') + ('00' + Math.abs(timezoneOffset)).slice(-2) + ':00'; // Format the timezone offset as '+00:00'
+const nowInUTC = new Date(now.getTime() + now.getTimezoneOffset() * 60000); // Convert the current time to UTC
+const nowInUTCString = nowInUTC.toLocaleString('en-US', { timeZone: 'UTC', hour12: false }); // Format the current time as a string in the UTC timezone
+const nowInDesiredTimeZoneString = nowInUTCString.replace('T', ' ').replace('Z', '') + timezoneOffsetString; // Add the timezone offset to the UTC time string
+// console.log(timezoneOffsetString);
+const today = new Date().toISOString().slice(0, 10);
+const todayDate = new Date()
+const midnight = new Date(today + 'T00:00:00');
+const tomorrowDate = new Date(nowInUTC.getFullYear(), nowInUTC.getMonth(), nowInUTC.getDate() + 2);
+const tomorrow = tomorrowDate.toISOString().slice(0, 10);
+// console.log(today);
+// console.log(tomorrow);
+//     console.log(now);
+//     console.log(nowInUTC);
+
+
+function publishTrainTable(trains){
+    const html = `
+    <table>
+    <tbody>
+        ${trains.map((train) => `
+        <tr>
+            <td><strong>${train.scheduledDepartureString}</strong>
+                <span  class="red">${train.actualDeparture !== 'On time' ? train.actualDeparture : ''}</span>
+                ->
+            ${train.scheduledArrival}
+                <span  class="red">${train.estimatedArrival !== 'On time' ? train.estimatedArrival : ''}</span>
+                <span class='smaller'>(${train.journeyTime.toFixed(0)} min\)</span>
+                </td>
+                <td >
+                    
+                    <span class='smallest'> platform </span>
+                    ${train.platformConfirmed ? '<strong>' : ''}
+                        ${train.platformChanged ? '<span class="red">' : ''}
+                             ${train.platform}
+                        ${train.platformChanged ? '</span>' : ''}
+                    ${train.platformConfirmed ? '</strong>' : ''}
+                    
+                </td> 
+        </tr>
+        <tr>
+            <td class='smaller'>${train.destination}</td>
+            <td><span class='smaller'>in </span><strong>${Math.floor((train.actualDepartureTime - now) / (1000 * 60))}</strong><span class='smaller'> min</span></td>
+
+        </tr>
+        `).join('')}
+    </tbody>
+    </table>
+    `;
+    return html;
+};
+
+function convertString(str) {
+    if (str.length !== 4) {
+        return "Invalid input";
+    }
+    const firstPart = str.slice(0, 2);
+    const secondPart = str.slice(2);
+    return `${firstPart}:${secondPart}`;
+};
+
+function getPlatformAPI(url){
+    
+    fetch(url)
+    .then(response => response.json())
+    .then(data => {
+        console.log(data);
+        const today = new Date().toISOString().slice(0, 10);
+        data.services.forEach((service) => {
+            const { destination, 
+                scheduledDepartureString, 
+                gbttBookedDeparture, 
+                realtimeDeparture, 
+                platform, 
+                platformConfirmed, 
+                serviceLocation, 
+                platformChanged, 
+                destination: [{workingTime: scheduledArrivalTime}] } = service.locationDetail;
+            const scheduledDepartureTimeString = `${today}T${convertString(gbttBookedDeparture)}:00Z`;
+            const scheduledDepartureTime = new Date(scheduledDepartureTimeString);
+            const journeyTime = (new Date(scheduledArrivalTime) - scheduledDepartureTime) / (1000 * 60); // convert milliseconds to minutes
+            const train = {
+                destination: destination[0].description,
+                scheduledDepartureString: convertString(gbttBookedDeparture),
+                scheduledDepartureTime: scheduledDepartureTime,
+                platform: platform,
+                platformConfirmed:platformConfirmed,
+                serviceLocation: serviceLocation,
+                platformChanged: platformChanged
+            };
+            
+
+        const targetElementIndex = trains.findIndex(
+            (element) => 
+            element.destination === train.destination && 
+            element.scheduledDepartureString === train.scheduledDepartureString
+        );
+        if (targetElementIndex !== -1) {
+            trains[targetElementIndex].platform = train.platform;
+            trains[targetElementIndex].platformConfirmed = train.platformConfirmed;
+            trains[targetElementIndex].serviceLocation = train.serviceLocation;
+            trains[targetElementIndex].platformChanged = train.platformChanged;
+            // console.log("Data updated successfully!");
+            // console.log(train);
+        } else {
+            // console.log("No matching data found.");
+        }
+
+        });
+
+        document.getElementById("trainTable").innerHTML = publishTrainTable(trains);
+    })
+    .catch(error => console.error(error));
+}
+
+function getTimeString(basicTime){
+    var day = "";
+    
+    if (basicTime.slice(0, 2) < 3){
+        day = tomorrow;
+        // console.log(basicTime.slice(0, 2));
+    }else{
+        day = today;
+    }
+    // console.log(`${day}T${basicTime}:00${timezoneOffsetString}`);
+    return `${day}T${basicTime}:00${timezoneOffsetString}`;
+}
+
+function getTrainTimesAPI(url){
+    
+    fetch(url)
+    .then(response => response.json())
+    .then(data => {
+        trains = [];
+        console.log(data);
+        Object.values(data.trainServices).forEach((trainService) => {
+            const { destination, std, etd, platform, subsequentCallingPoints } = trainService;
+            if (destination && subsequentCallingPoints && subsequentCallingPoints[0]) {
+                const surStation = subsequentCallingPoints[0].callingPoint.find((callingPoint) => callingPoint.crs === to);
+                if (surStation) {
+                const scheduledDepartureTimeString = getTimeString(std);
+                const scheduledDepartureTime = new Date(scheduledDepartureTimeString);
+                const actualDepartureString = `${etd !== 'On time' && etd !== 'Delayed' && etd !== 'Cancelled' ? etd : std}`
+                const actualDepartureTime = new Date(getTimeString(actualDepartureString));
+
+                const scheduledArrivalTimeString = getTimeString(surStation.st);
+                const scheduledArrivalTime = new Date(scheduledArrivalTimeString);
+                const estimatedArrivalString = `${surStation.et !== 'On time' && surStation.et !== 'Delayed' && surStation.et !== 'Cancelled' ? surStation.et : surStation.st}`
+                const estimatedArrivalTime = new Date(getTimeString(estimatedArrivalString));
+
+                const journeyTime = (estimatedArrivalTime - scheduledDepartureTime) / (1000 * 60); // convert milliseconds to minutes
+                const train = {
+                    destination: destination[0].locationName,
+                    scheduledDepartureString: std,
+                    scheduledDepartureTime: scheduledDepartureTime,
+                    actualDeparture: etd,
+                    platform: platform,
+                    scheduledArrival: surStation.st,
+                    scheduledArrivalTime: scheduledArrivalTime,
+                    estimatedArrival: surStation.et,
+                    journeyTime: journeyTime,
+                    actualDepartureTime:  actualDepartureTime,
+                    estimatedArrivalTime: estimatedArrivalTime
+                    // actualArrival: surStation.at
+                };
+                    trains.push(train);
+                    // console.log(train);
+            }
+            }
+        });
+
+    trains = trains.sort((train1, train2) => {
+        return train1.estimatedArrivalTime - train2.estimatedArrivalTime
+    });
+        // document.getElementById("trainTable").innerHTML = publishTrainTable(trains);
+    })
+    .catch(error => console.error(error));
+
+}
+
+
+// if ('serviceWorker' in navigator) {
+//   window.addEventListener('load', function() {
+//     navigator.serviceWorker.register('/service-worker3.js').then(function(registration) {
+//       console.log('Service worker registered with scope:', registration.scope);
+//     }, function(err) {
+//       console.error('Service worker registration failed:', err);
+//     });
+//   });
+// }   
+
+
+function reloadData(){
+
+    let url = `https://huxley2.azurewebsites.net/departures/${route}?expand=true`;
+    getTrainTimesAPI(url);
+    document.getElementById("trainTable").innerHTML = publishTrainTable(trains);
+    try {
+        url = `/trainTimesServer.php?route=${route}`;
+        getPlatformAPI(url);
+        document.getElementById("trainTable").innerHTML = publishTrainTable(trains);
+    } catch (error) {
+        console.log(error);
+    }
+}
+
+
+
+
+let from = 'WAT';
+let to = 'SUR';
+
+
+const hours = now.getHours();
+if (hours < 12) {
+    from = 'SUR';
+    to = 'WAT';
+} else {
+    from = 'WAT';
+    to = 'SUR';
+}
+
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.has('from')) {
+    from = urlParams.get('from');
+}
+if (urlParams.has('to')) {
+    to = urlParams.get('to');
+    document.title = `${from} to ${to}`;
+}else{
+    document.title = `Train Times`;
+}
+
+
+
+
+
+
+
+let route = `${from}/to/${to}`;
+trains = [];
+
+
+document.addEventListener("DOMContentLoaded", function() {
+
+    document.getElementById("title-bar").innerHTML = `${from} to ${to}`;
+    reloadData();
+
+
+  // Add click event listener to document
+  document.addEventListener("click", function(event) {
+    // Check if the clicked element is a button and is not in the toolbar
+    if (event.target.tagName === "I") {
+      // Handle button click here
+    //   console.log(event.target.id);
+      let url = new URL(window.location.href);
+      switch (event.target.id){
+        case "home":
+
+
+            // Swap the 'from' and 'to' values
+            url.searchParams.set("from", "WAT");
+            url.searchParams.set("to", "SUR");
+
+            // Redirect to the new URL
+            window.location.href = url.toString();
+            break;
+        case "work":
+
+            // Swap the 'from' and 'to' values
+            url.searchParams.set("from", "SUR");
+            url.searchParams.set("to", "WAT");
+
+            // Redirect to the new URL
+            window.location.href = url.toString();
+            break;
+        default:
+            break;
+      }
+    }
+
+
+
+    reloadData();
+
+  });
+});
+
+
+setInterval(function() {
+    reloadData();
+}, 30000); // 30 seconds in milliseconds
+
+        </script>
+
+    </head>
+    <body>
+
+        <div id="title-bar">Waterloo to Surbiton</div>
+        <div id='trainTable'></div>
+        <div class="toolbar">
+            <button class="toolbar-button">
+              <i id="home" class="fas fa-home fa-fw"></i>
+            </button>
+            <button class="toolbar-button">
+              <i id="reload" class="fas fa-sync-alt fa-fw"></i>
+            </button>
+            <button class="toolbar-button">
+              <i id="work" class="fas fa-briefcase fa-fw"></i>
+            </button>
+          </div>
+          
+          
+          
+
+    </body>
+
+</html>
