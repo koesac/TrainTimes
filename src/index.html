@@ -169,14 +169,14 @@ function publishTrainTable(trains){
                 <span class='smaller'>(${train.journeyTime.toFixed(0)} min\)</span>
                 </td>
                 <td >
-                    
+                    ${train.platform ? `
                     <span class='smallest'> platform </span>
                     ${train.platformConfirmed ? '<strong>' : ''}
                         ${train.platformChanged ? '<span class="red">' : ''}
                              ${train.platform}
                         ${train.platformChanged ? '</span>' : ''}
                     ${train.platformConfirmed ? '</strong>' : ''}
-                    
+                    ` : ``}
                 </td> 
         </tr>
         <tr>
