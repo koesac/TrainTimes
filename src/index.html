@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Train Times WAT - SUR</title>
+    <title>Train Times WAT - SUR test</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -289,7 +289,7 @@ function getTrainTimesAPI(url){
                 const estimatedArrivalString = `${surStation.et !== 'On time' && surStation.et !== 'Delayed' && surStation.et !== 'Cancelled' ? surStation.et : surStation.st}`
                 const estimatedArrivalTime = new Date(getTimeString(estimatedArrivalString));
 
-                const journeyTime = (estimatedArrivalTime - scheduledDepartureTime) / (1000 * 60); // convert milliseconds to minutes
+                const journeyTime = (estimatedArrivalTime - actualDepartureTime) / (1000 * 60); // convert milliseconds to minutes
                 const train = {
                     destination: destination[0].locationName,
                     scheduledDepartureString: std,
