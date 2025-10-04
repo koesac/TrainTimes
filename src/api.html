@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Train Times</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"  crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+ </head>
+    <body>
+        <div id="title-bar">Waterloo to Surbiton</div>
+        <div id='trainTable'></div>
+        
+          
+          
+          
+          <script>
+
+            function publishTrainTable(trains) {
+                const now = new Date();
+                const html = `
+                <table>
+                <tbody>
+                    ${trains.map((train) => `
+                    <tr>
+                        <td><strong>${train.scheduledDepartureString}</strong>
+                            <span class="red">${train.actualDeparture !== 'On time' ? train.actualDeparture : ''}</span>
+                            ->
+                        ${train.scheduledArrival}
+                            <span class="red">${train.estimatedArrival !== 'On time' ? train.estimatedArrival : ''}</span>
+                            <span class='smaller'>(${train.journeyTime.toFixed(0)} min)</span>
+                        </td>
+                        <td>
+                            ${train.platform ? `
+                            <span class='smallest'> platform </span>
+                            ${train.platformConfirmed ? '<strong>' : ''}
+                                ${train.platformChanged ? '<span class="red">' : ''}
+                                     ${train.platform}
+                                ${train.platformChanged ? '</span>' : ''}
+                            ${train.platformConfirmed ? '</strong>' : ''}
+                            ` : ``}
+                        </td> 
+                    </tr>
+                    <tr>
+                        <td class='smaller'>${train.destination}</td>
+                        <td><span class='smaller'>in </span><strong>${Math.floor((train.actualDepartureTimestamp - now.getTime()) / (1000 * 60))}</strong><span class='smaller'> min</span></td>
+                    </tr>
+                    `).join('')}
+                </tbody>
+                </table>
+                `;
+                document.getElementById("trainTable").innerHTML = html;
+            };
+
+            function reloadData(){
+                const urlParams = new URLSearchParams(window.location.search);
+                const from = urlParams.get('from');
+                const to = urlParams.get('to');
+
+                let apiUrl = 'trainTimes.php';
+                if (from && to) {
+                    apiUrl += `?from=${from}&to=${to}`;
+                }
+
+                fetch(apiUrl)
+                    .then(response => response.json())
+                    .then(data => {
+                        document.getElementById("title-bar").innerHTML = `${data.from} to ${data.to}`;
+                        document.title = `${data.from} to ${data.to}`;
+                        publishTrainTable(data.trains);
+                    })
+                    .catch(error => console.error('Error fetching train data:', error));
+            }
+
+            document.addEventListener("DOMContentLoaded", function() {
+                reloadData();
+
+              // Add click event listener to document
+              document.addEventListener("click", function(event) {
+                // Check if the clicked element is a button and is not in the toolbar
+                if (event.target.tagName === "I") {
+                  let url = new URL(window.location.href);
+                  switch (event.target.id){
+                    case "home":
+                        url.searchParams.set("from", "WAT");
+                        url.searchParams.set("to", "SUR");
+                        window.location.href = url.toString();
+                        break;
+                    case "work":
+                        url.searchParams.set("from", "SUR");
+                        url.searchParams.set("to", "WAT");
+                        window.location.href = url.toString();
+                        break;
+                    default:
+                        reloadData();
+                        break;
+                  }
+                }else{
+                    reloadData();
+                }
+              });
+            });
+
+            setInterval(function() {
+                reloadData();
+            }, 30000); // 30 seconds in milliseconds
+
+          </script>
+    </body>
+
+</html>
